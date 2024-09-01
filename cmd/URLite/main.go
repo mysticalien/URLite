@@ -3,12 +3,14 @@ package main
 import (
 	"URLite/internal/config"
 	mwLogger "URLite/internal/http-server/middleware/logger"
+	"URLite/internal/http-server/handlers/url/save"
 	"URLite/internal/lib/logger/handlers/slogpretty"
 	"URLite/internal/lib/logger/sl"
 	"URLite/internal/storage/sqlite"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"log/slog"
+	"net/http"
 	"os"
 )
 
@@ -52,6 +54,24 @@ func main() {
 	router.Use(mwLogger.New(log))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
+
+	router.Post("/url", save.New(log, storage))
+
+	log.Info("starting server", slog.String("address", cfg.Address))
+
+	srv := &http.Server{
+		Addr:         cfg.Address,
+		Handler:      router,
+		ReadTimeout:  cfg.HTTPServer.Timeout,
+		WriteTimeout: cfg.HTTPServer.Timeout,
+		IdleTimeout:  cfg.HTTPServer.IdleTimeout,
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
+		log.Error("failed to start server")
+	}
+
+	log.Error("server stopped")
 
 	// TODO: run server
 }
