@@ -2,8 +2,10 @@ package main
 
 import (
 	"URLite/internal/config"
-	mwLogger "URLite/internal/http-server/middleware/logger"
+	"URLite/internal/http-server/handlers/delete"
+	"URLite/internal/http-server/handlers/redirect"
 	"URLite/internal/http-server/handlers/url/save"
+	mwLogger "URLite/internal/http-server/middleware/logger"
 	"URLite/internal/lib/logger/handlers/slogpretty"
 	"URLite/internal/lib/logger/sl"
 	"URLite/internal/storage/sqlite"
@@ -56,6 +58,8 @@ func main() {
 	router.Use(middleware.URLFormat)
 
 	router.Post("/url", save.New(log, storage))
+	router.Get("/{alias}", redirect.New(log, storage))
+	router.Delete("/{alias}", delete.New(log, storage))
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 
