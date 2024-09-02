@@ -1,20 +1,20 @@
 package save_test
 
 import (
+	"URLite/internal/http-server/handlers/url/save"
+	"URLite/internal/http-server/handlers/url/save/mocks"
+	"URLite/internal/lib/logger/handlers/slogdiscard"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-
-	"URLite/internal/http-server/handlers/url/save"
-	"URLite/internal/http-server/handlers/url/save/mocks"
-	"URLite/internal/lib/logger/handlers/slogdiscard"
+	"time"
 )
 
 func TestSaveHandler(t *testing.T) {
@@ -23,7 +23,7 @@ func TestSaveHandler(t *testing.T) {
 		alias     string // Псевдоним, который передается вместе с URL
 		url       string // URL для сохранения
 		respError string // Ожидаемое сообщение об ошибке в ответе
-		mockError error // Ошибка, которую должен вернуть мок-объект при попытке сохранения URL
+		mockError error  // Ошибка, которую должен вернуть мок-объект при попытке сохранения URL
 	}{
 		{
 			name:  "Success",
@@ -72,6 +72,13 @@ func TestSaveHandler(t *testing.T) {
 			url:       "https://example.com/search?q=test",
 			respError: "",
 		},
+		{
+			name:      "Duplicate URL Error",
+			alias:     "duplicate_alias",
+			url:       "https://example.com/",
+			respError: "failed to add url",
+			mockError: errors.New("duplicate URL error"),
+		},
 	}
 
 	for _, tc := range cases {
@@ -85,10 +92,13 @@ func TestSaveHandler(t *testing.T) {
 			// Создаем мок-объект для интерфейса URLSaver
 			urlSaverMock := mocks.NewURLSaver(t)
 
+			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+			randomID := rng.Int63()
+
 			// Настраиваем мок-объект в зависимости от тестового случая
 			if tc.respError == "" || tc.mockError != nil {
 				urlSaverMock.On("SaveURL", tc.url, mock.AnythingOfType("string")).
-					Return(int64(1), tc.mockError).
+					Return(randomID, tc.mockError).
 					Once()
 			}
 
@@ -124,6 +134,9 @@ func TestSaveHandler(t *testing.T) {
 			// Проверяем, что поле Alias в ответе заполнено, если ожидается успешный результат
 			if tc.respError == "" {
 				require.NotEmpty(t, resp.Alias, "Alias should not be empty on success")
+				if tc.alias != "" {
+					require.Equal(t, tc.alias, resp.Alias, "Expected the alias in response to match the input alias")
+				}
 			}
 		})
 	}
