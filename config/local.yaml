@@ -4,3 +4,5 @@
       address: "localhost:8082"
       timeout: 4s # time to read the user request
       idle_timeout: 60s # waiting time
+      user: "user1"
+      password: "pass1"

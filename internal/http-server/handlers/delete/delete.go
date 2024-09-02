@@ -14,7 +14,9 @@ import (
 	"URLite/internal/storage"
 )
 
-// URLDeleter — это интерфейс для удаления URL по псевдониму.
+// URLDeleter — интерфейс для удаления URL по псевдониму.
+//
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=URLDeleter
 type URLDeleter interface {
 	DeleteURL(alias string) error
 }
@@ -43,6 +45,7 @@ func New(log *slog.Logger, urlDeleter URLDeleter) http.HandlerFunc {
 		if errors.Is(err, storage.ErrURLNotFound) {
 			log.Info("url not found", slog.String("alias", alias))
 			render.JSON(w, r, resp.Error("not found"))
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		if err != nil {
